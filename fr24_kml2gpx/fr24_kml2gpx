@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+# Copyright (c) 2022 Martijn Atema
+
+import sys;
+from fastkml import kml, geometry;
+from gpxpy import gpx;
+
+
+class GpsPoint:
+    def __init__(self, time, lon, lat, elev):
+        self.time = time;
+        self.lon = lon;
+        self.lat = lat;
+        self.elev = elev;
+
+    def __str__(self):
+        return "{}, Lon: {}, Lat: {}, Elev: {}".format(self.time, self.lon, self.lat, self.elev);
+
+
+def recursive_points(el):
+    if hasattr(el, "features"):
+        features = list(el.features());
+        all = [];
+
+        for f in features:
+            all.extend(recursive_points(f));
+
+        return all;
+
+    elif hasattr(el, "geometry") and isinstance(el.geometry, geometry.Point):
+        return [GpsPoint(
+            el.timeStamp,
+            el.geometry.x,
+            el.geometry.y,
+            el.geometry.z
+        )];
+
+    else:
+        return [];
+
+
+def process_file(in_path):
+    out_path = in_path + ".gpx";
+    in_file = open(in_path, "r").read().encode("utf-8");
+    out_file = open(out_path, "w");
+
+    k = kml.KML();
+    k.from_string(in_file);
+
+    g = gpx.GPX();
+    g_track = gpx.GPXTrack();
+    g.tracks.append(g_track);
+    g_segment = gpx.GPXTrackSegment();
+    g_track.segments.append(g_segment);
+
+    points = recursive_points(k);
+    for point in points:
+        g_point = gpx.GPXTrackPoint(
+            latitude=point.lat,
+            longitude=point.lon,
+            elevation=point.elev,
+            time=point.time
+        );
+        g_segment.points.append(g_point);
+
+    xml = g.to_xml();
+    out_file.write(xml);
+
+
+if __name__ == "__main__":
+    for f in sys.argv[1:]:
+        print("Processing file: {}".format(f));
+        process_file(f);
