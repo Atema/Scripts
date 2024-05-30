@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (c) 2022 Martijn Atema
+# Copyright (c) 2022-2023 Martijn Atema
 
+import os;
 import sys;
 from fastkml import kml, geometry;
 from gpxpy import gpx;
@@ -42,10 +43,10 @@ def recursive_points(el):
 
 def process_file(in_path):
     print("Processing file: {}".format(in_path));
-    in_file = open(in_path, "r").read().encode("utf-8");
+    in_file = open(in_path, "r")
 
     k = kml.KML();
-    k.from_string(in_file);
+    k.from_string(in_file.read().encode("utf-8"));
 
     flight_no = list(k.features())[0].name.split("/")[0].strip();
     desc_query = PyQuery(list(k.features())[0].description);
@@ -55,7 +56,8 @@ def process_file(in_path):
     points = recursive_points(k);
     flight_date = points[0].time.strftime("%Y.%m.%d - %H.%M")
 
-    out_path = "{} - {} ({}-{}).gpx".format(flight_date, flight_no, orig_airport, dest_airport);
+    out_base = "{} - {} ({}-{})".format(flight_date, flight_no, orig_airport, dest_airport);
+    out_path = out_base + ".gpx"
     print("Output to: {}".format(out_path));
     out_file = open(out_path, "w");
 
@@ -76,6 +78,13 @@ def process_file(in_path):
 
     xml = g.to_xml();
     out_file.write(xml);
+
+    in_file.close()
+    out_file.close()
+
+    os.rename(in_path, out_base + ".kml.html")
+
+
 
 
 if __name__ == "__main__":
